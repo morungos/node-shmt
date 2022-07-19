@@ -9,6 +9,7 @@
   "author": "Stuart Watt <morungos@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "minimist": "^1.2.6"
+    "minimist": "^1.2.6",
+    "open": "^8.4.0"
   }
 }
