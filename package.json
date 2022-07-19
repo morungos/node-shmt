@@ -1,0 +1,14 @@
+{
+  "name": "shmt",
+  "version": "1.0.0",
+  "description": "Stuart's Hubspot migration tool",
+  "main": "cli.js",
+  "bin": {
+    "shmt": "./cli.js"
+  },
+  "author": "Stuart Watt <morungos@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.6"
+  }
+}
