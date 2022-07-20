@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
+const fs = require('fs')
+
 const fetch = require('node-fetch')
 const minimist = require('minimist')
-
-const authorize = require('./lib/auth')
 
 const help = () => {
   console.log(`
@@ -11,7 +11,9 @@ Usage: shmt [command] [flags]
 
 Commands:
   - auth
-  - get [url] --api-key=xxxx
+  - list --api-key=xxxx
+  - get <url> --api-key=xxxx
+  - create <url> --api-key=xxxx --data file.json
   - help
 `)
 }
@@ -37,6 +39,33 @@ async function list(args) {
   for(const page of body.objects) {
     console.log("/%s (id: %d, state: %s)", page.slug, page.id, page.current_state)
   }
+}
+
+
+async function create(args) {
+  const unprocessed = args['_']
+  unprocessed.shift()
+
+  const slug = unprocessed.shift()
+  if (! slug) {
+    throw new Error("Missing page to retrieve")
+  }
+
+  if (! slug.startsWith("/")) {
+    throw new Error("Invalid URL: " + slug)
+  }
+
+  const apiKey = args['api-key'];
+  if (! apiKey) {
+    throw new Error("Missing API key")
+  }
+
+  const query = `https://api.hubapi.com/content/api/v2/pages?hapikey=${apiKey}`
+
+  const allowedFields = [
+    'campaign', 'campaign_name', 'footer_html', 'head_html', 'meta_description',
+    'meta_keywords', 'name', 'subcategory', 'widget_containers', 'widgets'
+  ]
 }
 
 
@@ -96,10 +125,6 @@ async function main() {
       help()
       break;
 
-    case 'auth':
-      await authorize()
-      break;
-  
     case 'list':
       await list(args)
       break;
