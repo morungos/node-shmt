@@ -2,6 +2,8 @@
 
 const minimist = require('minimist')
 
+const authorize = require('./lib/auth')
+
 const help = () => {
   console.log(`
 Usage: shmt [command] [flags]
@@ -12,17 +14,13 @@ Commands:
 `)
 }
 
-const auth = () => {
-  
-}
-
 /*
  * First step, authentication with OAuth. We may need to be able to 
  * do this more than once, for different systems, so we can associate
  * an access token and a refresh token with a portal.
  */
 
-const main = () => {
+async function main() {
   const args = minimist(process.argv.slice(2))
   console.log("Hello world", args);
 
@@ -35,6 +33,10 @@ const main = () => {
   switch (command) {
     case 'help':
       help()
+      break;
+
+    case 'auth':
+      await authorize()
       break;
   
     default:
