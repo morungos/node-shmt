@@ -35,10 +35,9 @@ async function list(args) {
 
   const body = await response.json();
   for(const page of body.objects) {
-    console.log("%s (id: %d, state: %s)", page.url, page.id, page.current_state)
+    console.log("/%s (id: %d, state: %s)", page.slug, page.id, page.current_state)
   }
 }
-
 
 
 async function get(args) {
@@ -50,12 +49,16 @@ async function get(args) {
     throw new Error("Missing page to retrieve")
   }
 
+  if (! slug.startsWith("/")) {
+    throw new Error("Invalid URL: " + slug)
+  }
+
   const apiKey = args['api-key'];
   if (! apiKey) {
     throw new Error("Missing API key")
   }
 
-  const query = `https://api.hubapi.com/content/api/v2/pages?hapikey=${apiKey}`
+  const query = `https://api.hubapi.com/content/api/v2/pages?hapikey=${apiKey}&slug=${slug.slice(1)}`
 
   const response = await fetch(query)
 
@@ -63,8 +66,14 @@ async function get(args) {
     throw new Error(`Invalid response: ${response.statusText}`)
   }
 
-  const body = await response.json();
-  console.log("Response: %O", body)
+  const body = await response.json()
+  const objects = body.objects
+
+  if (objects.length != 1) {
+    throw new Error("Can't find page: " + slug)
+  }
+
+  console.log("%s", JSON.stringify(objects[0], null, 2))
 }
 
 /*
