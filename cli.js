@@ -3,7 +3,17 @@
 const minimist = require('minimist')
 
 const help = () => {
+  console.log(`
+Usage: shmt [command] [flags]
 
+Commands:
+  - auth
+  - help
+`)
+}
+
+const auth = () => {
+  
 }
 
 /*
@@ -17,6 +27,26 @@ const main = () => {
   console.log("Hello world", args);
 
   const unprocessed = args['_']
+  if (unprocessed.length == 0) {
+    return help()
+  }
+  
+  const command = unprocessed[0]
+  switch (command) {
+    case 'help':
+      help()
+      break;
+  
+    default:
+      console.error(`
+Unexpected command: ${command}
+
+Use "shmt help" for more information`
+      )
+      process.exit(1)
+      break;
+  }
+
 }
 
 main()
