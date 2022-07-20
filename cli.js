@@ -3,6 +3,7 @@
 const fs = require('fs/promises');
 const createReadStream = require('fs').createReadStream;
 const { finished } = require('stream/promises')
+const _ = require('lodash')
 
 const fetch = require('node-fetch')
 const minimist = require('minimist')
@@ -18,8 +19,9 @@ Usage: shmt [command] [flags]
 Commands:
   - auth
   - list --api-key=xxxx
-  - get <url> --api-key=xxxx
-  - create <url> --api-key=xxxx --data file.json
+  - get <url>|<id> --api-key=xxxx
+  - update <id> --api-key=xxxx --data file.json
+  - create <url>|<id> --api-key=xxxx --data file.json
   - help
 `)
 }
@@ -97,6 +99,71 @@ async function getData(args, mapping) {
 }
 
 
+async function update(args) {
+
+  const unprocessed = args['_']
+  unprocessed.shift()
+
+  const id = unprocessed.shift()
+
+  if (! id || ! /^(\d+)$/.test(id)) {
+    throw new Error("Invalid page identifier")
+  }
+
+  const apiKey = args['api-key'];
+  if (! apiKey) {
+    throw new Error("Missing API key")
+  }
+
+  // First read the data file
+  const dataFile = args['data'];
+  if (! dataFile) {
+    throw new Error("Missing data file")
+  }
+
+  let data = await fs.readFile(dataFile)
+  if (! data) {
+    throw new Error("Failed to open data file")
+  }
+
+  data = JSON.parse(data.toString())
+
+  const patchFields = [
+    'layoutSections', 'templatePath'
+  ]
+
+  const patch = {}
+  for(let field of patchFields) {
+    if (data.hasOwnProperty(field)) {
+      patch[field] = data[field]
+    }
+  }
+
+  console.log("%s", JSON.stringify(patch, null, 2))
+
+  const query = `https://api.hubapi.com/cms/v3/pages/site-pages/${id}?hapikey=${apiKey}`
+  console.log(`About to PATCH to: ${query}`)
+
+  let dryRun = args['dry-run'];
+  if (dryRun) {
+    return
+  }
+
+  const response = await fetch(query, {
+    method: 'patch',
+    body: JSON.stringify(patch),
+    headers: {'Content-Type': 'application/json'}
+  });
+
+  if (response.status != 200) {
+    throw new Error(`Invalid response: ${response.statusText}`)
+  }
+
+  const body = await response.json()
+  console.log("%s", JSON.stringify(body, null, 2))
+}
+
+
 async function create(args) {
   const unprocessed = args['_']
   unprocessed.shift()
@@ -151,26 +218,21 @@ async function create(args) {
   console.log("%s", JSON.stringify(body, null, 2))
 }
 
+async function getById(apiKey, id) {
+  const query = `https://api.hubapi.com/cms/v3/pages/site-pages/${id}?hapikey=${apiKey}`
 
-async function get(args) {
-  const unprocessed = args['_']
-  unprocessed.shift()
+  const response = await fetch(query)
 
-  const slug = unprocessed.shift()
-  if (! slug) {
-    throw new Error("Missing page to retrieve")
+  if (response.status != 200) {
+    throw new Error(`Invalid response: ${response.statusText}`)
   }
 
-  if (! slug.startsWith("/")) {
-    throw new Error("Invalid URL: " + slug)
-  }
+  const body = await response.json()
+  return body
+}
 
-  const apiKey = args['api-key'];
-  if (! apiKey) {
-    throw new Error("Missing API key")
-  }
-
-  const query = `https://api.hubapi.com/cms/v3/pages/site-pages?hapikey=${apiKey}&slug=${slug.slice(1)}`
+async function getBySlug(apiKey, slug) {
+  const query = `https://api.hubapi.com/cms/v3/pages/site-pages?hapikey=${apiKey}&slug=${slug}`
 
   const response = await fetch(query)
 
@@ -185,7 +247,35 @@ async function get(args) {
     throw new Error("Can't find page: " + slug)
   }
 
-  console.log("%s", JSON.stringify(results[0], null, 2))
+  return results[0]
+}
+
+
+async function get(args) {
+  const unprocessed = args['_']
+  unprocessed.shift()
+
+  const slug = unprocessed.shift()
+  if (! slug) {
+    throw new Error("Missing page to retrieve")
+  }
+
+  const apiKey = args['api-key'];
+  if (! apiKey) {
+    throw new Error("Missing API key")
+  }
+
+  let body;
+
+  if (/^(\d+)$/.test(slug)) {
+    body = await getById(apiKey, parseInt(slug))
+  } else if (! slug.startsWith("/")) {
+    throw new Error("Invalid URL: " + slug)
+  } else {
+    body = await getBySlug(apiKey, slug.slice(1))
+  }
+
+  console.log("%s", JSON.stringify(body, null, 2))
 }
 
 /*
@@ -216,6 +306,10 @@ async function main() {
     
     case 'get':
       await get(args)
+      break;
+
+    case 'update':
+      await update(args)
       break;
 
     case 'create':
