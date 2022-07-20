@@ -27,7 +27,7 @@ async function list(args) {
     throw new Error("Missing API key")
   }
 
-  const query = `https://api.hubapi.com/content/api/v2/pages?hapikey=${apiKey}`
+  const query = `https://api.hubapi.com/cms/v3/pages/site-pages?hapikey=${apiKey}`
 
   const response = await fetch(query)
 
@@ -36,8 +36,8 @@ async function list(args) {
   }
 
   const body = await response.json();
-  for(const page of body.objects) {
-    console.log("/%s (id: %d, state: %s)", page.slug, page.id, page.current_state)
+  for(const page of body.results) {
+    console.log("/%s (id: %d, state: %s)", page.slug, page.id, page.state)
   }
 }
 
